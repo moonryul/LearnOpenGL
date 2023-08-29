@@ -17,6 +17,7 @@ void main()
 
     vec3 irradiance = vec3(0.0);   
     
+    //MJ: The convolution code
     // tangent space calculation from origin point
     vec3 up    = vec3(0.0, 1.0, 0.0);
     vec3 right = normalize(cross(up, N));

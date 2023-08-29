@@ -1,5 +1,6 @@
 #version 330 core
 out vec4 FragColor;
+
 in vec2 TexCoords;
 in vec3 WorldPos;
 in vec3 Normal;
@@ -11,7 +12,10 @@ uniform float roughness;
 uniform float ao;
 
 // IBL
-uniform samplerCube irradianceMap;
+uniform samplerCube irradianceMap; //MJ: irradianceMap is set to the texture unit 0
+// Declares a uniform samplerCube variable named irradianceMap, which represents a cube map texture. 
+//By calling pbrShader.setInt("irradianceMap", 0) in the application code, 
+//you are binding the irradianceMap sampler to the texture unit 0.
 
 // lights
 uniform vec3 lightPositions[4];
@@ -114,7 +118,9 @@ void main()
     vec3 kS = fresnelSchlick(max(dot(N, V), 0.0), F0);
     vec3 kD = 1.0 - kS;
     kD *= 1.0 - metallic;	  
+
     vec3 irradiance = texture(irradianceMap, N).rgb;
+
     vec3 diffuse      = irradiance * albedo;
     vec3 ambient = (kD * diffuse) * ao;
     // vec3 ambient = vec3(0.002);

@@ -61,6 +61,8 @@ vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness)
 	return normalize(sampleVec);
 }
 // ----------------------------------------------------------------------------
+
+// MJ: the pre-filter convolution shader:
 void main()
 {		
     vec3 N = normalize(WorldPos);

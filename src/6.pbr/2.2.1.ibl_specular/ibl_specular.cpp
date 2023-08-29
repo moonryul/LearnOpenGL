@@ -35,6 +35,8 @@ bool firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
+//MJ: Prefiltered Mipmapped Radiance Environment Map: PMREM
+
 int main()
 {
     // glfw: initialize and configure
@@ -94,7 +96,22 @@ int main()
     pbrShader.use();
     pbrShader.setInt("irradianceMap", 0);
     pbrShader.setInt("prefilterMap", 1);
+
+
+//MJ: Epic Games' split sum approximation roughly approaches the indirect specular part of the reflectance equation
+
+    // MJ: The first part (when convoluted) is known as the pre-filtered environment map which is (similar to the irradiance map) a pre-computed environment convolution map,
+    // but this time taking roughness into account.
     pbrShader.setInt("brdfLUT", 2);
+
+    //MJ: The second part of the split sum equation equals the BRDF part of the specular integral.
+    // If we pretend the incoming radiance is completely white for every direction (thus L(p,x)=1.0
+    //) we can pre-calculate the BRDF's response given an input roughness and an input angle between the normal n
+    //  and light direction ωi, or n⋅ωi.
+
+    // Epic Games stores the pre-computed BRDF's response to each normal and light direction combination on varying roughness values in a 2D lookup texture (LUT) known as the BRDF integration map. The 2D lookup texture outputs a scale (red)
+    //  and a bias value (green) to the surface's Fresnel response giving us the second part of the split specular integral:
+
     pbrShader.setVec3("albedo", 0.5f, 0.0f, 0.0f);
     pbrShader.setFloat("ao", 1.0f);
 
@@ -247,6 +264,26 @@ int main()
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+    //MJ: Epic Games proposed a solution where they were able to pre-convolute the specular part for real time purposes, given a few compromises,
+    // known as the split sum approximation.??
+
+    //a specular IBL map:
+
+    //  We were able to pre-compute the irradiance map as the integral only depended on ωi
+    // and we could move the constant diffuse albedo terms out of the integral.
+    // The integral also depends on wo , and we can't really sample a pre-computed cubemap with two direction vectors. 
+
+    //1)  The first part (when convoluted) is known as the pre-filtered environment map which is (similar to the irradiance map) a pre-computed environment convolution map,
+    // but this time taking roughness into account.
+
+    // For increasing roughness levels, the environment map is convoluted with more scattered sample vectors,
+    // creating blurrier reflections. For each roughness level we convolute, 
+    //we store the sequentially blurrier results in the pre-filtered map's mipmap levels.
+    // For instance, a pre-filtered environment map storing the pre-convoluted result of 5 different roughness 
+    //  values in its 5 mipmap levels
+
+    
+    //2) 
     // pbr: create a pre-filter cubemap, and re-scale capture FBO to pre-filter scale.
     // --------------------------------------------------------------------------------
     unsigned int prefilterMap;
@@ -266,6 +303,11 @@ int main()
 
     // pbr: run a quasi monte-carlo simulation on the environment lighting to create a prefilter (cube)map.
     // ----------------------------------------------------------------------------------------------------
+
+    //MJ: With the low-discrepancy Hammersley sequence and sample generation defined, we can finalize the pre-filter convolution shader:
+
+
+    //MJ: Capturing pre-filter mipmap levels
     prefilterShader.use();
     prefilterShader.setInt("environmentMap", 0);
     prefilterShader.setMat4("projection", captureProjection);
@@ -295,6 +337,10 @@ int main()
         }
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    //MJ: The second sum: Pre-computing the BRDF:
+
+    // The two resulting integrals represent a scale and a bias to F0  respectively. 
 
     // pbr: generate a 2D LUT from the BRDF equations used.
     // ----------------------------------------------------
